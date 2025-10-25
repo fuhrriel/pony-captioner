@@ -540,20 +540,10 @@ class PonyCaptioner:
 
     def caption_image_content(self, image_path, tags_str):
         self.init_content_model()
-        try:
-            rprint(f"[cyan]Loading image for captioning...[/cyan]")
-            image = load_image(image_path)
-            rprint(f"[cyan]Building prompt...[/cyan]")
-            prompt = CONTENT_PROMPT + '\nTAGS: ' + tags_str
-            rprint(f"[cyan]Running inference...[/cyan]")
-            response = self.content_pipeline((prompt, image))
-            rprint(f"[cyan]Got response, extracting text...[/cyan]")
-            return response.text
-        except Exception as e:
-            rprint(f"[red]Error in caption_image_content: {e}[/red]")
-            import traceback
-            traceback.print_exc()
-            raise
+        image = load_image(image_path)
+        prompt = CONTENT_PROMPT + '\nTAGS: ' + tags_str
+        response = self.content_pipeline((prompt, image))
+        return response.text
 
     def caption_image_style(self, image_path):
         self.init_style_model()
@@ -622,9 +612,15 @@ class PonyCaptioner:
         else:
             style_caption = open(style_caption_file, 'r').read()
         
-        # Clustering
+        # Clustering - use manual cluster if provided, otherwise compute it
         cluster_file = os.path.join(folder, f"{name}.cluster.txt")
-        if self.args.force_regen or not os.path.exists(cluster_file):
+        if self.args.style_cluster is not None:
+            # Use manual cluster
+            cluster = str(self.args.style_cluster)
+            rprint(f"[yellow]Using manual style cluster:[/yellow] {cluster}")
+            with open(cluster_file, 'w') as f:
+                f.write(cluster)
+        elif self.args.force_regen or not os.path.exists(cluster_file):
             rprint(f"[yellow]Style clustering:[/yellow] {name}")
             cluster = self.get_image_cluster(image_path)
             with open(cluster_file, 'w') as f:
@@ -644,8 +640,8 @@ class PonyCaptioner:
             score = int(open(score_file, 'r').read())
         
         # Final caption
-        full_caption_file = os.path.join(folder, f"{name}.full_caption.txt")
-        if self.args.force_regen or not os.path.exists(full_caption_file):
+        final_caption_file = os.path.join(folder, f"{name}.txt")
+        if self.args.force_regen or not os.path.exists(final_caption_file):
             rprint(f"[yellow]Building final caption:[/yellow] {name}")
             final_caption = self.build_caption(
                 tags_data['tags'],
@@ -655,7 +651,7 @@ class PonyCaptioner:
                 content_caption,
                 style_caption
             )
-            with open(full_caption_file, 'w') as f:
+            with open(final_caption_file, 'w') as f:
                 f.write(final_caption)
         
         rprint(f"[green]✓ Completed:[/green] {name}")
@@ -672,17 +668,12 @@ class PonyCaptioner:
         
         for image_path, name in image_files:
             try:
-                rprint(f"[yellow]Processing: {name}[/yellow]")
                 self.process_image(image_path, name)
-            except KeyboardInterrupt:
-                rprint(f"[red]Interrupted by user[/red]")
-                raise
             except Exception as e:
                 rprint(f"[red]✗ Error processing {name}:[/red] {e}")
-                import traceback
-                traceback.print_exc()
                 if self.args.verbose:
-                    rprint("[red]Full traceback printed above[/red]")
+                    import traceback
+                    traceback.print_exc()
         
         # Cleanup
         if self.content_pipeline:
@@ -715,6 +706,12 @@ def main():
         '--verbose',
         action='store_true',
         help='Enable verbose output'
+    )
+    parser.add_argument(
+        '--style-cluster',
+        type=int,
+        default=None,
+        help='Manual style cluster ID (skips automatic clustering)'
     )
     
     args = parser.parse_args()

@@ -1,5 +1,7 @@
 # Quick Start Guide
 
+**GitHub:** https://github.com/fuhrriel/pony-captioner
+
 ## Prerequisites
 
 - NVIDIA GPU with 40GB+ VRAM
@@ -9,16 +11,12 @@
 ## Setup (5 minutes)
 
 ```bash
-# 1. Create project directory
-mkdir pony-captioner && cd pony-captioner
-mkdir images models
+# 1. Clone the repository
+git clone https://github.com/fuhrriel/pony-captioner.git
+cd pony-captioner
 
-# 2. Add all the provided files:
-#    - pony_captioner.py
-#    - test_gpu.py
-#    - Dockerfile
-#    - compose.yml
-#    - .env.example (optional)
+# 2. Create directories for images and models
+mkdir -p images models
 
 # 3. Copy your images
 cp /path/to/your/images/* ./images/
@@ -57,7 +55,7 @@ First run will download ~40GB of models. Be patient!
 
 ```bash
 # View a generated caption
-cat images/your_image.full_caption.txt
+cat images/your_image.txt
 ```
 
 ## Common Commands
@@ -65,6 +63,9 @@ cat images/your_image.full_caption.txt
 ```bash
 # Force regenerate everything
 docker compose run --rm pony-captioner /workspace/images --force-regen
+
+# Use manual style cluster (for training new styles not in original dataset)
+docker compose run --rm pony-captioner /workspace/images --style-cluster 2048
 
 # Verbose output for debugging
 docker compose run --rm pony-captioner /workspace/images --verbose
@@ -84,9 +85,24 @@ For each `image.png`, you'll get:
 - `image.style_caption.txt` - Style analysis
 - `image.cluster.txt` - Style cluster ID
 - `image.score.txt` - Aesthetic score (0-9)
-- **`image.full_caption.txt`** - Final combined caption ← Use this for training!
+- **`image.txt`** - Final combined caption ← Use this for training!
 
 ## Troubleshooting
+
+### "externally-managed-environment" Error During Build
+
+If you see this error:
+```
+error: externally-managed-environment
+× This environment is externally managed
+```
+
+**Solution**: Make sure your Dockerfile has this line at the top:
+```dockerfile
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+```
+
+This is normal for Ubuntu 24.04 and is safe in Docker. See `PEP668_UBUNTU24.md` for details.
 
 ### "CUDA not available"
 ```bash

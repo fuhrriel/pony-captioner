@@ -21,24 +21,28 @@ docker compose run --rm pony-captioner /workspace/images --force-regen
 echo "Example 3: Verbose mode..."
 docker compose run --rm pony-captioner /workspace/images --verbose
 
-# Example 4: Using docker directly without compose
-echo "Example 4: Direct docker run..."
+# Example 4: Use manual style cluster (for training new styles)
+echo "Example 4: Manual style cluster..."
+docker compose run --rm pony-captioner /workspace/images --style-cluster 2048
+
+# Example 5: Using docker directly without compose
+echo "Example 5: Direct docker run..."
 docker run --rm --gpus all \
   -v $(pwd)/images:/workspace/images \
   -v $(pwd)/models:/models \
   --shm-size=16g \
   pony-captioner /workspace/images
 
-# Example 5: Process images from a different directory
-echo "Example 5: Custom image directory..."
+# Example 6: Process images from a different directory
+echo "Example 6: Custom image directory..."
 docker run --rm --gpus all \
   -v /path/to/your/images:/workspace/custom_images \
   -v $(pwd)/models:/models \
   --shm-size=16g \
   pony-captioner /workspace/custom_images
 
-# Example 6: Interactive shell for debugging
-echo "Example 6: Interactive shell..."
+# Example 7: Interactive shell for debugging
+echo "Example 7: Interactive shell..."
 docker compose run --rm --entrypoint /bin/bash pony-captioner
 
 # Check GPU availability
@@ -47,8 +51,9 @@ docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi
 
 # View generated captions
 echo "Viewing sample caption..."
-if [ -f images/*.full_caption.txt ]; then
-  cat images/*.full_caption.txt | head -20
+CAPTION_FILE=$(ls images/*.txt 2>/dev/null | grep -v "caption.txt\|cluster.txt\|score.txt" | head -1)
+if [ -n "$CAPTION_FILE" ]; then
+  cat "$CAPTION_FILE" | head -20
 else
   echo "No captions generated yet. Run the captioner first."
 fi

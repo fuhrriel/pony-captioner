@@ -2,6 +2,19 @@
 
 A standalone Python script to generate detailed, V7-compatible captions for images using multiple ML models. This version is optimized for Docker deployment with GPU support.
 
+**GitHub Repository:** https://github.com/fuhrriel/pony-captioner
+
+## What's Included
+
+- `pony_captioner.py` - Main captioning script
+- `test_gpu.py` - GPU/CUDA verification script  
+- `Dockerfile` - Container definition with CUDA 12.1 support
+- `docker-compose.yml` - Easy orchestration setup
+- `requirements.txt` - Python dependencies reference
+- `.env.example` - Environment variable template
+- `example_usage.sh` - Example commands
+- `README.md` - This file
+
 ## Features
 
 - **Multi-model tagging** using SmilingWolf/wd-swinv2-tagger-v3 and toynya/Z3D-E621-Convnext
@@ -14,8 +27,39 @@ A standalone Python script to generate detailed, V7-compatible captions for imag
 ## Requirements
 
 - Docker with NVIDIA Container Toolkit
-- NVIDIA GPU with at least 40GB VRAM (for the largest models)
+- NVIDIA GPU with CUDA 12.6+ support and at least 40GB VRAM (for the largest models)
 - ~100GB disk space for models and cache
+
+**Note:** The Docker image uses Ubuntu 24.04, Python 3.12, CUDA 12.6, and installs PyTorch 2.8.0 with CUDA support from PyTorch's official wheel repository.
+
+### Running Without Docker (Advanced)
+
+If you want to run without Docker on your host system:
+
+```bash
+# Clone the repository
+git clone https://github.com/fuhrriel/pony-captioner.git
+cd pony-captioner
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install PyTorch with CUDA
+pip install torch==2.8.0 torchvision --index-url https://download.pytorch.org/whl/cu126
+
+# Install other dependencies
+pip install numpy==2.0.2 transformers==4.44.2 lmdeploy==0.10.1 rich pandas \
+    onnxruntime-gpu git+https://github.com/openai/CLIP.git huggingface-hub Pillow
+
+# Run the script
+python pony_captioner.py /path/to/images
+```
+
+**Requirements for non-Docker:**
+- CUDA 12.6+ drivers installed
+- Python 3.10+ (3.12 recommended)
+- ~100GB for models
 
 ## Setup
 
@@ -23,13 +67,14 @@ A standalone Python script to generate detailed, V7-compatible captions for imag
 
 ```bash
 # Ubuntu/Debian
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
-  sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
 sudo apt-get update
 sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 ```
 
@@ -44,8 +89,15 @@ cd pony-captioner
 
 Place these files in the `pony-captioner` directory:
 - `pony_captioner.py`
+- `test_gpu.py`
 - `Dockerfile`
-- `docker-compose.yml`
+- `compose.yml`
+
+Optional: Create `.env` file from template for custom configuration:
+```bash
+cp .env.example .env
+# Edit .env with your settings (HuggingFace token, etc.)
+```
 
 ### 4. Add Your Images
 
@@ -60,28 +112,49 @@ cp /path/to/your/images/* ./images/
 ### Build the Docker Image
 
 ```bash
-docker-compose build
+docker compose build
 ```
+
+### Test GPU Support (Recommended First Step)
+
+Before processing images, verify that CUDA and GPU are working correctly:
+
+```bash
+docker compose run --rm --entrypoint python3 pony-captioner /workspace/test_gpu.py
+```
+
+This should show:
+- ✓ CUDA available: True
+- ✓ GPU information
+- ✓ All dependencies loaded
 
 ### Run the Captioner
 
 Basic usage (process all images in the images folder):
 
 ```bash
-docker-compose run --rm pony-captioner /workspace/images
+docker compose run --rm pony-captioner /workspace/images
 ```
 
 Force regeneration of all captions:
 
 ```bash
-docker-compose run --rm pony-captioner /workspace/images --force-regen
+docker compose run --rm pony-captioner /workspace/images --force-regen
 ```
 
 With verbose output:
 
 ```bash
-docker-compose run --rm pony-captioner /workspace/images --verbose
+docker compose run --rm pony-captioner /workspace/images --verbose
 ```
+
+Use manual style cluster (for training new styles):
+
+```bash
+docker compose run --rm pony-captioner /workspace/images --style-cluster 2048
+```
+
+This skips automatic style clustering and uses your provided cluster ID instead.
 
 ### Using Without Docker Compose
 
@@ -104,7 +177,7 @@ For each image (e.g., `example.png`), the script generates:
 - `example.style_caption.txt` - Style and artistic analysis
 - `example.cluster.txt` - Style cluster ID
 - `example.score.txt` - Aesthetic score
-- `example.full_caption.txt` - **Final combined caption for training**
+- `example.txt` - **Final combined caption for training**
 
 ## Models Downloaded
 
@@ -123,15 +196,33 @@ Total: ~40GB
 ## Command Line Options
 
 ```
-usage: pony_captioner.py [-h] [--force-regen] [--verbose] image_folder
+usage: pony_captioner.py [-h] [--force-regen] [--verbose] [--style-cluster STYLE_CLUSTER] image_folder
 
 positional arguments:
-  image_folder   Path to folder containing images
+  image_folder          Path to folder containing images
 
 options:
-  -h, --help     show this help message and exit
-  --force-regen  Force regeneration of all files even if they exist
-  --verbose      Enable verbose output
+  -h, --help            show this help message and exit
+  --force-regen         Force regeneration of all files even if they exist
+  --verbose             Enable verbose output
+  --style-cluster STYLE_CLUSTER
+                        Manual style cluster ID (skips automatic clustering)
+```
+
+### Examples
+
+```bash
+# Basic usage
+python pony_captioner.py /path/to/images
+
+# Force regenerate everything
+python pony_captioner.py /path/to/images --force-regen
+
+# Use manual style cluster (useful for training new styles)
+python pony_captioner.py /path/to/images --style-cluster 2048
+
+# Combine options
+python pony_captioner.py /path/to/images --style-cluster 2048 --verbose
 ```
 
 ## Performance Notes
@@ -143,13 +234,23 @@ options:
 
 ## Troubleshooting
 
+### Verify GPU and CUDA Support
+
+Check if PyTorch can see your GPU:
+
+```bash
+docker compose run --rm --entrypoint python3 pony-captioner -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU count: {torch.cuda.device_count()}'); print(f'GPU name: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}')"
+```
+
+Expected output should show `CUDA available: True`.
+
 ### Out of Memory Errors
 
 If you encounter OOM errors:
 1. Ensure you have enough VRAM (40GB+ recommended)
 2. Close other GPU-intensive applications
 3. Process images in smaller batches
-4. Increase `--shm-size` in docker-compose.yml
+4. Increase `shm_size` in compose.yml
 
 ### Models Not Downloading
 
@@ -167,7 +268,7 @@ sudo chown -R $USER:$USER ./images ./models
 
 ### Using a Different Image Folder
 
-Edit `docker-compose.yml` and change the volume mount:
+Edit `compose.yml` and change the volume mount:
 
 ```yaml
 volumes:
