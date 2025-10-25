@@ -1,0 +1,52 @@
+# Models and cache
+models/
+*.pth
+*.onnx
+*.bin
+*.safetensors
+
+# Images
+images/
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.webp
+
+# Generated outputs
+*.txt
+*.json
+
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Logs
+*.log

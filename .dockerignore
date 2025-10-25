@@ -1,0 +1,48 @@
+# Ignore model cache
+models/
+*.pth
+*.onnx
+*.bin
+*.safetensors
+
+# Ignore images
+images/
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.webp
+
+# Ignore outputs
+*.txt
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+compose.yml
+docker-compose.yml
+
+# Documentation
+README.md
+LICENSE

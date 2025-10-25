@@ -1,0 +1,26 @@
+services:
+  pony-captioner:
+    build: .
+    image: pony-captioner:latest
+    env_file:
+      - .env  # Optional: create from .env.example
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - HF_HOME=${HF_HOME:-/models/huggingface_cache}
+      - TRANSFORMERS_CACHE=${TRANSFORMERS_CACHE:-/models/huggingface_cache}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      # Mount your image folder here
+      - ./images:/workspace/images
+      # Mount model cache directory (models will be downloaded here)
+      - ./models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: '16gb'
+    command: /workspace/images
+
