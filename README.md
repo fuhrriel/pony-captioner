@@ -4,19 +4,6 @@ A standalone Python script to generate detailed, V7-compatible captions for imag
 
 **GitHub Repository:** https://github.com/fuhrriel/pony-captioner
 
-## What's Included
-
-- `pony_captioner.py` - Main captioning script
-- `test_gpu.py` - GPU/CUDA verification script  
-- `Dockerfile` - Container definition with CUDA 12.1 support
-- `docker-compose.yml` - Easy orchestration setup
-- `requirements.txt` - Python dependencies reference
-- `.env.example` - Environment variable template
-- `example_usage.sh` - Example commands
-- `README.md` - This file
-
-## Features
-
 - **Multi-model tagging** using SmilingWolf/wd-swinv2-tagger-v3 and toynya/Z3D-E621-Convnext
 - **Content captioning** with detailed descriptions of subjects, actions, and environment
 - **Style captioning** analyzing artistic elements like composition, lighting, and medium
@@ -27,43 +14,14 @@ A standalone Python script to generate detailed, V7-compatible captions for imag
 ## Requirements
 
 - Docker with NVIDIA Container Toolkit
-- NVIDIA GPU with CUDA 12.6+ support and at least 40GB VRAM (for the largest models)
+- NVIDIA GPU with CUDA 12.8+ support and at least 80GB VRAM
 - ~100GB disk space for models and cache
-
-**Note:** The Docker image uses Ubuntu 24.04, Python 3.12, CUDA 12.6, and installs PyTorch 2.8.0 with CUDA support from PyTorch's official wheel repository.
-
-### Running Without Docker (Advanced)
-
-If you want to run without Docker on your host system:
-
-```bash
-# Clone the repository
-git clone https://github.com/fuhrriel/pony-captioner.git
-cd pony-captioner
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install PyTorch with CUDA
-pip install torch==2.8.0 torchvision --index-url https://download.pytorch.org/whl/cu126
-
-# Install other dependencies
-pip install numpy==2.0.2 transformers==4.44.2 lmdeploy==0.10.1 rich pandas \
-    onnxruntime-gpu git+https://github.com/openai/CLIP.git huggingface-hub Pillow
-
-# Run the script
-python pony_captioner.py /path/to/images
-```
-
-**Requirements for non-Docker:**
-- CUDA 12.6+ drivers installed
-- Python 3.10+ (3.12 recommended)
-- ~100GB for models
 
 ## Setup
 
 ### 1. Install NVIDIA Container Toolkit
+
+No guarantee this step instruction works, consult offical documentation on how to install it for your distro.
 
 ```bash
 # Ubuntu/Debian
@@ -81,18 +39,11 @@ sudo systemctl restart docker
 ### 2. Prepare Directory Structure
 
 ```bash
-mkdir -p pony-captioner/images pony-captioner/models
+mkdir -p images models
 cd pony-captioner
 ```
 
 ### 3. Add Files
-
-Place these files in the `pony-captioner` directory:
-- `pony_captioner.py`
-- `test_gpu.py`
-- `Dockerfile`
-- `compose.yml`
-
 Optional: Create `.env` file from template for custom configuration:
 ```bash
 cp .env.example .env
@@ -183,15 +134,13 @@ For each image (e.g., `example.png`), the script generates:
 
 On first run, the following models will be downloaded to `./models`:
 
-1. **SmilingWolf/wd-swinv2-tagger-v3** (~1GB) - Image tagging
-2. **toynya/Z3D-E621-Convnext** (~500MB) - Additional tagging
-3. **purplesmartai/Pony-InternVL2-40B-AWQ** (~20GB) - Content captioning
-4. **purplesmartai/Pony-InternVL2-26B-AWQ** (~13GB) - Style captioning
-5. **purplesmartai/style-classifier** (~2GB) - Style clustering
-6. **purplesmartai/aesthetic-classifier** (~300MB) - Quality scoring
-7. **CLIP ViT-L/14** (~1.7GB) - Used by clustering and aesthetic models
-
-Total: ~40GB
+1. **SmilingWolf/wd-swinv2-tagger-v3** - Image tagging
+2. **toynya/Z3D-E621-Convnext** - Additional tagging
+3. **purplesmartai/Pony-InternVL2-40B-AWQ** - Content captioning
+4. **purplesmartai/Pony-InternVL2-26B-AWQ** - Style captioning
+5. **purplesmartai/style-classifier** - Style clustering
+6. **purplesmartai/aesthetic-classifier** - Quality scoring
+7. **CLIP ViT-L/14** - Used by clustering and aesthetic models
 
 ## Command Line Options
 
@@ -229,8 +178,6 @@ python pony_captioner.py /path/to/images --style-cluster 2048 --verbose
 
 - First run will take longer due to model downloads
 - Processing time varies by image size and GPU performance
-- The 40B content model requires ~40GB VRAM
-- Smaller GPUs may need to use smaller models or reduce batch sizes
 
 ## Troubleshooting
 
@@ -247,22 +194,8 @@ Expected output should show `CUDA available: True`.
 ### Out of Memory Errors
 
 If you encounter OOM errors:
-1. Ensure you have enough VRAM (40GB+ recommended)
+1. Ensure you have enough VRAM (80GB+ recommended)
 2. Close other GPU-intensive applications
-3. Process images in smaller batches
-4. Increase `shm_size` in compose.yml
-
-### Models Not Downloading
-
-- Check your internet connection
-- Verify you have enough disk space (~100GB free)
-- Check HuggingFace is accessible from your network
-
-### Permission Errors
-
-```bash
-sudo chown -R $USER:$USER ./images ./models
-```
 
 ## Advanced Configuration
 
